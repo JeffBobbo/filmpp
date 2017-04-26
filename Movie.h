@@ -73,15 +73,16 @@ Genre::CATEGORY categoryFrom_string(const std::string& str);
 class Movie
 {
 public:
-  Movie() {}//: totalScore(0), numScores(-1) {}
+  Movie() : count(0), totalScore(-1), average(0) {}
 
   const std::string& getName() const { return name; }
   const Genre& getGenre() const { return genre; }
   int16_t getRuntime() const { return runtime; }
 
   Rating::Score ratingHighest() const;
-
-  //std::size_t numRatings() const { return ratings.amount(name); }
+  std::size_t   ratingCount() const;
+  Rating::Score ratingTotal() const;
+  Rating::Score ratingAverage() const;
 
   inline bool operator<(const Movie& other) const { return year < other.year || (year == other.year && name < other.name); }
   inline bool operator>(const Movie& other) const { return year > other.year || (year == other.year && name > other.name); }
@@ -93,14 +94,16 @@ public:
   friend std::ostream& operator<<(std::ostream& os, const Movie& m);
   friend std::istream& operator>>(std::istream& is, Movie& m);
 private:
+  void calcRatings() const;
   std::string name;
   int16_t year;
   AgeRating age;
   Genre genre;
   int16_t runtime;
-  //Rating::Score totalScore;
-  //std::size_t numScores;
-  //double average;
+
+  mutable std::size_t count;
+  mutable Rating::Score totalScore;
+  mutable Rating::Score average;
 };
 
 #endif

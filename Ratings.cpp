@@ -1,25 +1,35 @@
 #include "Ratings.h"
 
 
-Rating::Score Ratings::min() const
+std::ostream& operator<<(std::ostream& os, const Rating& r)
 {
-  Rating::Score m = Rating::MAX_SCORE;
-  for (auto it : ratings)
-  {
-    if (it.getScore() < m)
-      m = it.getScore();
-  }
-  return m;
+  os << r.when << ",\"" << r.author << "\",\"" << r.film << "\"," << r.score;
+  return os;
 }
-Rating::Score Ratings::max() const
+
+std::istream& operator>>(std::istream& is, Rating& r)
 {
-  Rating::Score m = 0;
-  for (auto it : ratings)
-  {
-    if (it.getScore() > m)
-      m = it.getScore();
-  }
-  return m;
+  is >> r.when;
+  if (is.get() != ',')
+    throw std::string("Invalid Rating format");
+  if (is.get() != '"')
+    throw std::string("Invalid Rating format");
+  r.author = "";
+  while (is.peek() != '"')
+    r.author += is.get();
+  is.get(); // close quote
+  if (is.get() != ',')
+    throw std::string("Invalid Rating format");
+  if (is.get() != '"')
+    throw std::string("Invalid Rating format");
+  r.film = "";
+  while (is.peek() != '"')
+    r.film += is.get();
+  is.get(); // closing quote
+  if (is.get() != ',')
+    throw std::string("Invalid Rating format");
+  is >> r.score; // last token is the score
+  return is;
 }
 
 std::list<Rating> Ratings::createFilter() const
@@ -51,33 +61,21 @@ const Rating& Ratings::find(std::function<bool(const Rating& a, const Rating& b)
   return *best;
 }
 
-std::ostream& operator<<(std::ostream& os, const Rating& r)
+std::ostream& operator<<(std::ostream& os, const Ratings& ratings)
 {
-  os << r.when << ",\"" << r.author << "\",\"" << r.film << "\"," << r.score;
+  for (auto r : ratings.ratings)
+    os << r << std::endl;
   return os;
 }
 
-std::istream& operator>>(std::istream& is, Rating& r)
+std::istream& operator>>(std::istream& is, Ratings& ratings)
 {
-  is >> r.when;
-  if (is.get() != ',')
-    throw std::string("Invalid Rating format");
-  if (is.get() != '"')
-    throw std::string("Invalid Rating format");
-  r.author = "";
-  while (is.peek() != '"')
-    r.author += is.get();
-  is.get(); // close quote
-  if (is.get() != ',')
-    throw std::string("Invalid Rating format");
-  if (is.get() != '"')
-    throw std::string("Invalid Rating format");
-  r.film = "";
-  while (is.peek() != '"')
-    r.film += is.get();
-  is.get(); // closing quote
-  if (is.get() != ',')
-    throw std::string("Invalid Rating format");
-  is >> r.score; // last token is the score
+  while (is.good() && is.peek() != EOF)
+  {
+    Rating r;
+    is >> r;
+    ratings.add(r);
+    is.get(); // consume new line
+  }
   return is;
 }

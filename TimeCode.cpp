@@ -4,6 +4,39 @@
 #include <iomanip> // std::setw, std::setfill
 #include <utility> // std::move
 
+std::time_t leapDays(const std::time_t& year)
+{
+  return
+    (year)/4 // leap year every 4 years
+  - (year)/100 // but not every 100, so take away those
+  + (year)/400; // but it is every 400, so add those back in
+}
+
+const std::time_t SECONDS_A_DAY = 86400;
+const std::time_t SECONDS_A_YEAR = SECONDS_A_DAY * 365;
+const std::time_t EPOCH = 1970;
+// number of leap days up to 1970-01-01
+const std::time_t EPOCH_LEAPS = leapDays(EPOCH-1);
+const std::time_t MONTHS[] = {
+  31, // jan
+  28, // feb
+  31, // mar
+  30, // apr
+  31, // may
+  30, // jun
+  31, // jul
+  31, // aug
+  30, // sep
+  31, // oct
+  30, // nov
+  31  // dec
+};
+
+bool isLeapYear(const std::time_t& year)
+{
+  return year % 4 == 0 && (year % 100 != 0 || year % 400);
+}
+
 // str = dd/mm/yyyyThh:mm:ssz
 TimeCode::TimeCode(const std::string& str)
 {
@@ -27,36 +60,45 @@ TimeCode::TimeCode(const std::string& str)
   seconds = std::stol(str.substr(pos, end-pos));
 }
 
-std::time_t leapDays(const std::time_t& year)
+TimeCode::TimeCode(std::time_t t) : TimeCode()
 {
-  return
-    (year)/4 // leap year every 4 years
-  - (year)/100 // but not every 100, so take away those
-  + (year)/400; // but it is every 400, so add those back in
+  seconds = t % 60;
+  t -= seconds;
+
+  minutes = (t / 60) % 60;
+  t -= minutes * 60;
+  hours = (t / 3600) % 24;
+  t -= hours * 3600;
+
+  days = t / 86400;
+  years = days / 365;
+  days -= years * 365;
+  std::time_t leaps = leapDays(years-1);
+  years += 1970;
+
+  days -= leaps;
+  if (days < 0)
+  {
+    --years;
+    days += 365;
+  }
+
+  std::time_t mdays = 0;
+  std::time_t i = 0;
+  for (; i < 12; ++i)
+  {
+    if (mdays + MONTHS[i] < days)
+      mdays += MONTHS[i];
+    else
+      break;
+  }
+  months = i;
+  days -= mdays;
+  ++days;
 }
 
 TimeCode::operator std::time_t() const
 {
-  static const std::time_t SECONDS_A_DAY = 86400;
-  static const std::time_t SECONDS_A_YEAR = SECONDS_A_DAY * 365;
-  static const std::time_t EPOCH = 1970;
-  // number of leap days up to 1970-01-01
-  static const std::time_t EPOCH_LEAPS = leapDays(EPOCH-1);
-  static const std::time_t MONTHS[] = {
-    31, // jan
-    28, // feb
-    31, // mar
-    30, // apr
-    31, // may
-    30, // jun
-    31, // jul
-    31, // aug
-    30, // sep
-    31, // oct
-    30, // nov
-    31
-  };
-
   std::time_t y = years - EPOCH;
 
   // seconds for each year since EPOCH
@@ -68,7 +110,7 @@ TimeCode::operator std::time_t() const
 
   // if the month is greater than 2, then we've gone past February. Include an
   // extra day if it's a leap year
-  if (months >= 2 && (years % 4 == 0 && (years % 100 || years % 400 == 0)))
+  if (months >= 2 && isLeapYear(years))
     ret += SECONDS_A_DAY;
 
   // add in leap days since 1970, but don't include the current year,
@@ -86,10 +128,75 @@ TimeCode::operator std::time_t() const
   return ret;
 }
 
-//TimeCode::TimeCode(const std::string&& str)
-//{
-//  TimeCode(str);
-//}
+TimeCode& TimeCode::operator+=(const TimeCode& other)
+{
+  seconds += other.seconds;
+  while (seconds < 0)
+  {
+    --minutes;
+    seconds += 60;
+  }
+  while (seconds > 59)
+  {
+    ++minutes;
+    seconds -= 60;
+  }
+
+  minutes += other.minutes;
+  while (minutes < 0)
+  {
+    --hours;
+    minutes += 60;
+  }
+  while (minutes > 59)
+  {
+    ++hours;
+    minutes -= 60;
+  }
+
+  hours += other.hours;
+  while (hours < 0)
+  {
+    --days;
+    hours += 24;
+  }
+  while (hours > 23)
+  {
+    ++days;
+    hours -= 24;
+  }
+
+  // -1 days because day range is 1..31
+  --days;
+  for (std::time_t m = 0; m < months; ++m)
+    days += MONTHS[m];
+  for (std::time_t m = 0; m < other.months; ++m)
+    days += MONTHS[m];
+  days += other.days;
+  months = 0;
+
+  while (days < 1)
+  {
+    days += 365;
+    if ((0 - days) > 60 && isLeapYear(years))
+      days += 1;
+    --years;
+  }
+  while (days > (isLeapYear(years) ? 366 : 365))
+  {
+    days -= 365;
+    if (days > 60 && isLeapYear(years))
+      --days;
+    ++years;
+  }
+
+  std::time_t m = 0;
+  while (days > MONTHS[m])
+    days -= MONTHS[m++];
+  months = m;
+
+  return *this;
+}
 
 std::ostream& operator<<(std::ostream& os, const TimeCode& tc)
 {

@@ -8,25 +8,8 @@
 class TimeCode
 {
 public:
-  /*
-  static const std::string MONTHS[] = {
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-  };
-  */
   TimeCode() : years(1970), months(0), days(1), hours(0), minutes(0), seconds(0) {};
   TimeCode(const std::string& str);
-  //TimeCode(const std::string&& str);
 
   TimeCode(const TimeCode& copy)
     :years(copy.years),months(copy.months),days(copy.days)
@@ -36,6 +19,7 @@ public:
     :years(move.years),months(move.months),days(move.days)
     ,hours(move.hours),minutes(move.minutes),seconds(move.seconds)
   {}
+  TimeCode(std::time_t t);
 
   inline time_t getYear() const { return years; }
   inline time_t getMonth() const { return months; }
@@ -51,11 +35,18 @@ public:
   inline bool operator<=(const TimeCode& other) const { return !(*this < other); }
   inline bool operator>=(const TimeCode& other) const { return !(*this > other); }
 
+  TimeCode& operator+=(const TimeCode& other);// { return TimeCode(static_cast<std::time_t>(*this) + other); }
+  TimeCode& operator-=(const TimeCode& other) { return *this += -other; }
+  inline TimeCode operator+(const TimeCode& other) const { TimeCode tc = *this; tc += other; return tc; }
+  inline TimeCode operator-(const TimeCode& other) const { TimeCode tc = *this; tc -= other; return tc; }
+  inline TimeCode operator-() const { return TimeCode(-static_cast<std::time_t>(*this)); }
+
   operator std::time_t() const;
 
   friend std::ostream& operator<<(std::ostream& os, const TimeCode& tc);
   friend std::istream& operator>>(std::istream& is, TimeCode& tc);
 private:
+
   std::time_t years;
   std::time_t months;
   std::time_t days;

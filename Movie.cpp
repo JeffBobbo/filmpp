@@ -214,9 +214,44 @@ Rating::Score Movie::ratingHighest() const
   return best;
 }
 
+std::size_t Movie::ratingCount() const
+{
+  if (count == 0)
+    calcRatings();
+  return count;
+}
+
+Rating::Score Movie::ratingTotal() const
+{
+  if (totalScore < 0)
+    calcRatings();
+  return totalScore;
+}
+
+Rating::Score Movie::ratingAverage() const
+{
+  if (average == 0)
+    average = ratingTotal() / ratingCount();
+  return average;
+}
+
+void Movie::calcRatings() const
+{
+  count = 0;
+  totalScore = 0;
+  for (auto it : mdb.ratings)
+  {
+    if (it.getFilm() == getName())
+    {
+      ++count;
+      totalScore += it.getScore();
+    }
+  }
+}
+
 std::ostream& operator<<(std::ostream& os, const Movie& m)
 {
-  os << "\"" << m.name << "\"," << m.year << ",\"" << m.age << "\"," << m.genre << "\"," << m.runtime << ",0,0";
+  os << "\"" << m.name << "\"," << m.year << ",\"" << m.age << "\"," << m.genre << "\"," << m.runtime << "," << m.ratingAverage() << "," << m.ratingCount();
   return os;
 }
 
@@ -246,10 +281,6 @@ std::istream& operator>>(std::istream& is, Movie& m)
   if (is.get() != '"')
     throw std::string("Invalid Movie format");
   is >> m.genre;
-//  std::stringstream ss;
-//  while (is.peek() != '"')
-//    ss << static_cast<char>(is.get());
-//  m.genre = ss.str();
   if (is.get() != '"')
     throw std::string("Invalid Movie format");
   if (is.get() != ',')
@@ -257,11 +288,10 @@ std::istream& operator>>(std::istream& is, Movie& m)
   is >> m.runtime;
   if (is.get() != ',')
     throw std::string("Invalid Movie format");
-  if (is.get() != '0')
-    throw std::string("Invalid Movie format");
+
+  is >> m.average;
   if (is.get() != ',')
     throw std::string("Invalid Movie format");
-  if (is.get() != '0')
-    throw std::string("Invalid Movie format");
+  is >> m.count;
   return is;
 }

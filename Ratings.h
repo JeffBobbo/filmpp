@@ -13,8 +13,7 @@
 class Rating
 {
 public:
-  typedef uint32_t Score;
-  static const Score MAX_SCORE = (1 << sizeof(Score)) - 1;
+  typedef double Score;
 
   Rating() : when(), author(""), film(""), score(-1) {}
 
@@ -48,14 +47,14 @@ public:
   inline std::vector<Rating>::iterator end() { return ratings.end(); }
   inline std::vector<Rating>::const_iterator cend() const { return ratings.cend(); }
 
-  Rating::Score min() const;
-  Rating::Score max() const;
   std::list<Rating> createFilter() const;
   static void filter(std::list<Rating>& list, std::function<bool(const Rating& m)> fn);
   const Rating& find(std::function<bool(const Rating& a, const Rating& b)> fn) const;
 
   inline void add(Rating& r) { ratings.push_back(r); }
-  //inline void remove(Rating& r) { ratings.erase(r); }
+
+  friend std::ostream& operator<<(std::ostream& os, const Ratings& ratings);
+  friend std::istream& operator>>(std::istream& is, Ratings& ratings);
 private:
   std::vector<Rating> ratings;
 };

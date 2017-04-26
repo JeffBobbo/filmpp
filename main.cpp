@@ -6,128 +6,40 @@
 #include "Movie.h"
 #include "MovieDatabase.h"
 
-class CSV
-{
-public:
-  CSV(const std::string& file, const char delimiter = ',', const bool header = false)
-  {
-    buff.open(file);
-    parse(delimiter, header);
-  }
-
-  inline std::vector<std::vector<std::string> >::const_iterator begin() const
-  {
-    return std::begin(data);
-  }
-  inline std::vector<std::vector<std::string> >::const_iterator end() const
-  {
-    return std::end(data);
-  }
-
-  inline const std::vector<std::string>& operator[](const std::size_t n) const
-  {
-    return data[n];
-  }
-
-  inline std::size_t entries() const { return data.size(); }
-  inline std::size_t columns() const { return data.size() ? data[0].size() : -1; }
-
-private:
-  void parse(const char& delimiter, const bool header)
-  {
-    if (header)
-    {
-      std::string head;
-      std::getline(buff, head);
-    }
-
-    std::string line;
-    while (std::getline(buff, line))
-    {
-      std::string::size_type p = 0;
-      std::vector<std::string> entry;
-      while (p < line.length())
-      {
-        if (line[p] == delimiter)
-        {
-          ++p;
-          continue;
-        }
-        std::string::size_type len = 0;
-        if (line[p] == '"')
-        {
-          ++p;
-          std::string::size_type end = p;
-          while (end < line.length() && line[end] != '"')
-            ++end;
-          len = end - p;
-        }
-        else
-        {
-          std::string::size_type end = p;
-          while (end < line.length() && line[end] != delimiter)
-            ++end;
-          len = end - p;
-        }
-        entry.push_back(line.substr(p, len));
-        p += len + 1;
-      }
-      data.push_back(entry);
-    }
-  }
-
-// members
-private:
-  std::ifstream buff;
-  std::vector<std::vector<std::string> > data;
-};
-
 MovieDatabase mdb;
-
 
 #include <iostream>
 int main()
 {
   /*
-  CSV csv("movies.txt");
-  for (auto r : csv)
-  {
-    for (auto f : r)
-      std::cout << f << " ";
-    std::cout << std::endl;
-  }
-   */
-
   TimeCode tcEpoch;
   TimeCode tcNowIsh;
   std::istringstream is("02/04/2400T15:14:30Z");
   is >> tcNowIsh;
 
-  if (tcEpoch != 0)
+  if (static_cast<std::time_t>(tcEpoch) != 0)
     std::cout << "tcEpoch isn't 0 but is " << std::time_t(tcEpoch)<< ", diff: " << (0 - std::time_t(tcEpoch)) << std::endl;
-  if (tcNowIsh != 13577469270)
+  if (static_cast<std::time_t>(tcNowIsh) != 13577469270)
     std::cout << "tcNowIsh isn't 13577469270 but is " << std::time_t(tcNowIsh)<< ", diff: " << (13577469270 - std::time_t(tcNowIsh)) << std::endl;
 
-  std::ifstream ifs("ratings.txt");
-  std::string line;
-  while (std::getline(ifs, line))
-  {
-    std::istringstream is(line);
-    Rating r;
-    is >> r;
-    mdb.ratings.add(r);
-  }
-  std::cout << mdb.ratings.size() << std::endl;
-  std::cout << mdb.ratings.at(0) << std::endl;
+  TimeCode tcDay(86400);
+  TimeCode tcHour(3600);
 
-  std::cout << "The smallest score in the ratings is: " << static_cast<uint>(mdb.ratings.min()) << std::endl;
-  std::cout << "The biggest score in the ratings is: " << static_cast<uint>(mdb.ratings.max()) << std::endl;
+  TimeCode tcDayHour = tcDay;
+  tcDayHour -= tcHour;
+  std::cout << tcDay << " + " << tcHour << " = " << tcDayHour << std::endl;
+  std::cout << static_cast<std::time_t>(tcDay) << " + " << static_cast<std::time_t>(tcHour) << " = " << static_cast<std::time_t>(tcDayHour) << std::endl;
+  */
 
-  std::cout << std::endl << std::endl;
+
   try
   {
-    std::ifstream ifs("movies.txt");
-    ifs >> mdb;
+    std::ifstream ifsr("ratings.txt");
+    ifsr >> mdb.ratings;
+    ifsr.close();
+    std::ifstream ifsm("movies.txt");
+    ifsm >> mdb;
+    ifsm.close();
   }
   catch (std::string e)
   {
@@ -148,7 +60,7 @@ int main()
   {
     std::list<Movie> scifi = mdb.createFilter();
     MovieDatabase::filter(scifi, [](const Movie& m) { return m.getGenre()[Genre::CATEGORY::SCI_FI]; });
-    scifi.sort([](const Movie& a, const Movie& b) { return a.ratingHighest() > b.ratingHighest(); });
+    scifi.sort([](const Movie& a, const Movie& b) { return a.ratingAverage() > b.ratingAverage(); });
     std::list<Movie>::const_iterator it = std::next(std::begin(scifi), 9);
     if (it != std::end(scifi))
       std::cout << *it << std::endl;
